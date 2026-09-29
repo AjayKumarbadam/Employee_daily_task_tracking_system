@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EDSTS — Employee Daily Task Status Tracking System</title>
+  <!-- Google Fonts & Tailwind CSS via CDN -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --info: #3b82f6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background-color: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+    
+    /* Layout */
+    .app-container { display: flex; min-height: 100vh; }
+    .sidebar { width: 260px; background: #1e1b4b; color: white; display: flex; flex-direction: column; flex-shrink: 0; }
+    .sidebar-header { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .sidebar-header h1 { font-size: 1.1rem; font-weight: 700; color: #e0e7ff; }
+    .sidebar-header p { font-size: 0.75rem; color: #a5b4fc; margin-top: 4px; }
+    
+    .nav-links { list-style: none; padding: 16px 12px; flex: 1; }
+    .nav-item { padding: 10px 14px; border-radius: 8px; margin-bottom: 6px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 500; color: #c7d2fe; transition: all 0.2s; }
+    .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.12); color: white; }
+    
+    .sidebar-user { padding: 16px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: space-between; }
+    .user-info-brief { font-size: 0.85rem; }
+    .user-info-brief .name { font-weight: 600; color: #fff; }
+    .user-info-brief .role-badge { display: inline-block; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: #6366f1; color: white; margin-top: 2px; }
+    
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+    .top-header { background: white; border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; }
+    .page-title { font-size: 1.35rem; font-weight: 700; color: var(--text-main); }
+    .content-body { padding: 32px; max-width: 1300px; width: 100%; margin: 0 auto; }
+    
+    /* Buttons */
+    .btn { padding: 8px 16px; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: white; border: 1px solid var(--border); color: var(--text-main); }
+    .btn-secondary:hover { background: #f1f5f9; }
+    .btn-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
+    
+    /* Cards & Stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 28px; }
+    .stat-card { background: white; border-radius: 12px; padding: 20px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .stat-card .label { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+    .stat-card .value { font-size: 1.8rem; font-weight: 800; color: var(--text-main); }
+    
+    /* Tables */
+    .table-container { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { background: #f8fafc; padding: 12px 16px; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    td { padding: 14px 16px; font-size: 0.875rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background-color: #f8fafc; }
+    
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+    .badge-completed { background: #d1fae5; color: #065f46; }
+    .badge-in_progress { background: #dbeafe; color: #1e40af; }
+    .badge-not_started { background: #f1f5f9; color: #475569; }
+    .badge-blocked { background: #fee2e2; color: #991b1b; }
+    .badge-cancelled { background: #e2e8f0; color: #64748b; }
+    .badge-high, .badge-critical { background: #fee2e2; color: #b91c1c; }
+    .badge-medium { background: #fef3c7; color: #92400e; }
+    .badge-low { background: #f0fdf4; color: #166534; }
+    .badge-overdue { background: #ffe4e6; color: #e11d48; font-weight: 700; border: 1px solid #fda4af; }
+    
+    /* Progress bar */
+    .progress-bar-container { width: 100%; background: #e2e8f0; border-radius: 9999px; height: 8px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: var(--primary); border-radius: 9999px; transition: width 0.3s ease; }
+    .progress-bar-fill.complete { background: var(--success); }
+    
+    /* Modals & Forms */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; }
+    .modal-card { background: white; border-radius: 12px; max-width: 550px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+    .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-body { padding: 24px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; background: #f8fafc; }
+    
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: #334155; }
+    .form-control { width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.9rem; background: white; }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+    textarea.form-control { resize: vertical; min-height: 80px; }
+
+    /* Login Box */
+    .login-wrapper { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); padding: 20px; }
+    .login-box { background: white; border-radius: 16px; padding: 40px; width: 100%; max-width: 440px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+    .demo-accounts { background: #f8fafc; border: 1px dashed var(--border); border-radius: 8px; padding: 12px; margin-top: 20px; font-size: 0.8rem; }
+    .demo-btn { cursor: pointer; color: var(--primary); font-weight: 600; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    // State management
+    const API_BASE = '/api/v1';
+    let state = {
+      token: localStorage.getItem('edsts_token') || null,
+      user: JSON.parse(localStorage.getItem('edsts_user') || 'null'),
+      activeTab: 'dashboard',
+      dashboardData: null,
+      tasks: [],
+      statuses: [],
+      users: [],
+      dailyUpdates: [],
+      selectedTaskForUpdate: null,
+      showCreateTaskModal: false,
+      showSubmitUpdateModal: false,
+      showCreateUserModal: false,
+      loading: false,
+      error: null
+    };
+
+    function saveAuth(token, user) {
+      state.token = token;
+      state.user = user;
+      localStorage.setItem('edsts_token', token);
+      localStorage.setItem('edsts_user', JSON.stringify(user));
+    }
+
+    function clearAuth() {
+      state.token = null;
+      state.user = null;
+      localStorage.removeItem('edsts_token');
+      localStorage.removeItem('edsts_user');
+      render();
+    }
+
+    async function apiRequest(endpoint, options = {}) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+      
+      const config = { ...options, headers: { ...headers, ...options.headers } };
+      const response = await fetch(`${API_BASE}${endpoint}`, config);
+      
+      if (response.status === 401) {
+        clearAuth();
+        throw new Error("Session expired. Please log in again.");
+      }
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || "Request failed");
+      }
+      return data;
+    }
+
+    // Actions
+    async function login(email, password) {
+      try {
+        state.loading = true;
+        render();
+        const res = await apiRequest('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+        });
+        saveAuth(res.access_token, res.user);
+        await loadInitialData();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        state.loading = false;
+        render();
+      }
+    }
+
+    async function loadInitialData() {
+      if (!state.token) return;
+      try {
+        state.loading = true;
+        render();
+        // Load statuses
+        state.statuses = await apiRequest('/tasks/statuses');
+        
+        // Load dashboard
+        const role = state.user.roles[0];
+        if (role === 'ADMIN' || role === 'MANAGER') {
+          state.dashboardData = await apiRequest('/dashboard/manager');
+          state.users = await apiRequest('/users');
+        } else {
+          state.dashboardData = await apiRequest('/dashboard/employee');
+        }
+        
+        // Load tasks
+        state.tasks = await apiRequest('/tasks');
+        
+        // Load daily updates
+        state.dailyUpdates = await apiRequest('/daily-updates');
+      } catch (err) {
+        console.error(err);
+      } finally {
+        state.loading = false;
+        render();
+      }
+    }
+
+    async function submitDailyUpdate(taskId, statusId, progress, remarks) {
+      try {
+        await apiRequest('/daily-updates', {
+          method: 'POST',
+          body: JSON.stringify({
+            task_id: taskId,
+            status_id: parseInt(statusId),
+            progress_percentage: parseInt(progress),
+            remarks: remarks
+          })
+        });
+        state.showSubmitUpdateModal = false;
+        alert("Daily update submitted successfully!");
+        await loadInitialData();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function createTask(title, description, priority, dueDate, assignedUserId) {
+      try {
+        await apiRequest('/tasks', {
+          method: 'POST',
+          body: JSON.stringify({
+            title,
+            description,
+            priority,
+            due_date: dueDate,
+            assigned_to_user_id: assignedUserId || null
+          })
+        });
+        state.showCreateTaskModal = false;
+        alert("Task created successfully!");
+        await loadInitialData();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function createUser(name, email, empId, password, dept, desig, roleName, mgrId) {
+      try {
+        await apiRequest('/users', {
+          method: 'POST',
+          body: JSON.stringify({
+            name,
+            email,
+            employee_id: empId,
+            password,
+            department: dept,
+            designation: desig,
+            roles: [roleName],
+            manager_id: mgrId || null
+          })
+        });
+        state.showCreateUserModal = false;
+        alert("User created successfully!");
+        await loadInitialData();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    // Render Components
+    function renderLogin() {
+      return `
+        <div class="login-wrapper">
+          <div class="login-box">
+            <h2 style="font-size: 1.5rem; font-weight: 800; color: #1e1b4b; margin-bottom: 8px;">EDSTS Login</h2>
+            <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 24px;">Employee Daily Task Status Tracking System</p>
+            
+            <form onsubmit="event.preventDefault(); login(document.getElementById('email').value, document.getElementById('password').value);">
+              <div class="form-group">
+                <label class="form-label">Work Email</label>
+                <input id="email" class="form-control" type="email" placeholder="e.g. ravi@edsts.com" required value="ravi@edsts.com" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Password</label>
+                <input id="password" class="form-control" type="password" required value="ravi123" />
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 8px;">
+                Sign In to Dashboard
+              </button>
+            </form>
+
+            <div class="demo-accounts">
+              <strong>Quick Demo Credentials:</strong><br>
+              • <strong>Admin:</strong> <span class="demo-btn" onclick="document.getElementById('email').value='admin@edsts.com'; document.getElementById('password').value='admin123';">admin@edsts.com / admin123</span><br>
+              • <strong>Manager:</strong> <span class="demo-btn" onclick="document.getElementById('email').value='manager@edsts.com'; document.getElementById('password').value='manager123';">manager@edsts.com / manager123</span><br>
+              • <strong>Employee:</strong> <span class="demo-btn" onclick="document.getElementById('email').value='ravi@edsts.com'; document.getElementById('password').value='ravi123';">ravi@edsts.com / ravi123</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSidebar() {
+      const role = state.user.roles[0];
+      return `
+        <div class="sidebar">
+          <div class="sidebar-header">
+            <h1>EDSTS Portal</h1>
+            <p>Task Progress Tracker</p>
+          </div>
+          <ul class="nav-links">
+            <li class="nav-item ${state.activeTab === 'dashboard' ? 'active' : ''}" onclick="state.activeTab='dashboard'; render();">
+              📊 Dashboard
+            </li>
+            <li class="nav-item ${state.activeTab === 'tasks' ? 'active' : ''}" onclick="state.activeTab='tasks'; render();">
+              📋 ${role === 'EMPLOYEE' ? 'My Assigned Tasks' : 'All Tasks'}
+            </li>
+            <li class="nav-item ${state.activeTab === 'history' ? 'active' : ''}" onclick="state.activeTab='history'; render();">
+              📅 Daily Updates Log
+            </li>
+            ${(role === 'ADMIN' || role === 'MANAGER') ? `
+            <li class="nav-item ${state.activeTab === 'users' ? 'active' : ''}" onclick="state.activeTab='users'; render();">
+              👥 Employee Directory
+            </li>
+            ` : ''}
+          </ul>
+          <div class="sidebar-user">
+            <div class="user-info-brief">
+              <div class="name">${state.user.name}</div>
+              <span class="role-badge">${role}</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="clearAuth()" style="color: #ef4444; border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.1);">
+              Exit
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderManagerDashboard() {
+      const summary = state.dashboardData?.summary || {};
+      const employees = state.dashboardData?.employees || [];
+      return `
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="label">Total Tasks</div>
+            <div class="value">${summary.total_tasks || 0}</div>
+          </div>
+          <div class="stat-card" style="border-left: 4px solid var(--success);">
+            <div class="label">Completed</div>
+            <div class="value" style="color: var(--success);">${summary.completed || 0}</div>
+          </div>
+          <div class="stat-card" style="border-left: 4px solid var(--info);">
+            <div class="label">In Progress</div>
+            <div class="value" style="color: var(--info);">${summary.in_progress || 0}</div>
+          </div>
+          <div class="stat-card" style="border-left: 4px solid #64748b;">
+            <div class="label">Not Started</div>
+            <div class="value">${summary.not_started || 0}</div>
+          </div>
+          <div class="stat-card" style="border-left: 4px solid var(--danger);">
+            <div class="label">Blocked / Overdue</div>
+            <div class="value" style="color: var(--danger);">${(summary.blocked || 0) + (summary.overdue || 0)}</div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="font-size: 1.1rem; font-weight: 700;">Employee Daily Progress Status</h3>
+          <button class="btn btn-primary" onclick="state.showCreateTaskModal=true; render();">+ Create & Assign Task</button>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Total Tasks</th>
+                <th>Completed</th>
+                <th>In Progress</th>
+                <th>Blocked</th>
+                <th>Today's Submission</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${employees.map(e => `
+                <tr>
+                  <td>
+                    <strong>${e.name}</strong><br>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">${e.employee_id}</span>
+                  </td>
+                  <td>${e.department}</td>
+                  <td><strong>${e.total_assigned}</strong></td>
+                  <td><span class="badge badge-completed">${e.completed}</span></td>
+                  <td><span class="badge badge-in_progress">${e.in_progress}</span></td>
+                  <td><span class="badge badge-blocked">${e.blocked}</span></td>
+                  <td>
+                    ${e.has_submitted_today 
+                      ? '<span class="badge badge-completed">Submitted</span>' 
+                      : '<span class="badge badge-blocked">Pending Update</span>'}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderEmployeeDashboard() {
+      const summary = state.dashboardData?.summary || {};
+      return `
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="label">My Assigned Tasks</div>
+            <div class="value">${summary.total_tasks || 0}</div>
+          </div>
+          <div class="stat-card" style="border-left: 4px solid var(--success);">
+            <div class="label">Completed</div>
+            <div class="value" style="color: var(--success);">${summary.completed || 0}</div>
+          </div>
+          <div class="stat-card" style="border-left: 4px solid var(--info);">
+            <div class="label">In Progress</div>
+            <div class="value" style="color: var(--info);">${summary.in_progress || 0}</div>
+          </div>
+          <div class="stat-card" style="border-left: 4px solid var(--warning);">
+            <div class="label">Today's Submissions</div>
+            <div class="value">${state.dashboardData?.today_submitted_count || 0} / ${summary.total_tasks || 0}</div>
+          </div>
+        </div>
+
+        <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 16px;">My Daily Task Checklist</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Task Title</th>
+                <th>Priority</th>
+                <th>Due Date</th>
+                <th>Current Status</th>
+                <th>Progress</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.tasks.map(t => {
+                const latest = t.latest_update;
+                const statusName = latest?.status_name || 'NOT_STARTED';
+                const progress = latest?.progress_percentage || 0;
+                return `
+                  <tr>
+                    <td>
+                      <strong>${t.title}</strong><br>
+                      <span style="font-size: 0.8rem; color: var(--text-muted);">${t.description || ''}</span>
+                    </td>
+                    <td><span class="badge badge-${t.priority.toLowerCase()}">${t.priority}</span></td>
+                    <td>
+                      ${t.due_date} 
+                      ${t.is_overdue ? '<span class="badge badge-overdue">OVERDUE</span>' : ''}
+                    </td>
+                    <td><span class="badge badge-${statusName.toLowerCase()}">${statusName}</span></td>
+                    <td style="width: 160px;">
+                      <div style="font-size: 0.75rem; font-weight: 600; margin-bottom: 4px;">${progress}%</div>
+                      <div class="progress-bar-container">
+                        <div class="progress-bar-fill ${progress === 100 ? 'complete' : ''}" style="width: ${progress}%;"></div>
+                      </div>
+                    </td>
+                    <td>
+                      <button class="btn btn-primary btn-sm" onclick="state.selectedTaskForUpdate = state.tasks.find(x => x.id === '${t.id}'); state.showSubmitUpdateModal = true; render();">
+                        Submit Daily Status
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderTasksTab() {
+      const isManagerOrAdmin = state.user.roles.includes('ADMIN') || state.user.roles.includes('MANAGER');
+      return `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div>
+            <h2 style="font-size: 1.25rem; font-weight: 700;">Task Management</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">All work items and their active assignees</p>
+          </div>
+          ${isManagerOrAdmin ? `<button class="btn btn-primary" onclick="state.showCreateTaskModal=true; render();">+ New Task</button>` : ''}
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Assignee</th>
+                <th>Priority</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.tasks.map(t => {
+                const assigneeName = t.current_assignment?.assignee?.name || 'Unassigned';
+                const statusName = t.latest_update?.status_name || 'NOT_STARTED';
+                const progress = t.latest_update?.progress_percentage || 0;
+                return `
+                  <tr>
+                    <td><strong>${t.title}</strong></td>
+                    <td>${assigneeName}</td>
+                    <td><span class="badge badge-${t.priority.toLowerCase()}">${t.priority}</span></td>
+                    <td>${t.due_date} ${t.is_overdue ? '<span class="badge badge-overdue">OVERDUE</span>' : ''}</td>
+                    <td><span class="badge badge-${statusName.toLowerCase()}">${statusName}</span></td>
+                    <td>${progress}%</td>
+                    <td>
+                      <button class="btn btn-secondary btn-sm" onclick="state.selectedTaskForUpdate = state.tasks.find(x => x.id === '${t.id}'); state.showSubmitUpdateModal = true; render();">
+                        Update Status
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderHistoryTab() {
+      return `
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 1.25rem; font-weight: 700;">Daily Task Progress History</h2>
+          <p style="color: var(--text-muted); font-size: 0.85rem;">End-of-day submissions, remarks, and audit trail</p>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Employee</th>
+                <th>Task</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.dailyUpdates.map(u => `
+                <tr>
+                  <td><strong>${u.update_date}</strong></td>
+                  <td>${u.user_name}</td>
+                  <td>${u.task_title || 'N/A'}</td>
+                  <td><span class="badge badge-${(u.status_name || 'NOT_STARTED').toLowerCase()}">${u.status_name}</span></td>
+                  <td><strong>${u.progress_percentage}%</strong></td>
+                  <td style="color: #334155; font-style: italic;">"${u.remarks}"</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderUsersTab() {
+      return `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div>
+            <h2 style="font-size: 1.25rem; font-weight: 700;">Employee Directory</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Manage team members and organizational hierarchy</p>
+          </div>
+          ${state.user.roles.includes('ADMIN') ? `<button class="btn btn-primary" onclick="state.showCreateUserModal=true; render();">+ Add Employee</button>` : ''}
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Emp Code</th>
+                <th>Name & Email</th>
+                <th>Department</th>
+                <th>Designation</th>
+                <th>Role</th>
+                <th>Manager</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.users.map(u => `
+                <tr>
+                  <td><code>${u.employee_id}</code></td>
+                  <td>
+                    <strong>${u.name}</strong><br>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">${u.email}</span>
+                  </td>
+                  <td>${u.department}</td>
+                  <td>${u.designation}</td>
+                  <td><span class="badge badge-in_progress">${u.roles.join(', ')}</span></td>
+                  <td>${u.manager?.name || '—'}</td>
+                  <td>
+                    ${u.is_active 
+                      ? '<span class="badge badge-completed">Active</span>' 
+                      : '<span class="badge badge-cancelled">Inactive</span>'}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderSubmitUpdateModal() {
+      if (!state.showSubmitUpdateModal || !state.selectedTaskForUpdate) return '';
+      const task = state.selectedTaskForUpdate;
+      const latest = task.latest_update;
+      return `
+        <div class="modal-overlay">
+          <div class="modal-card">
+            <div class="modal-header">
+              <h3 style="font-weight: 700;">Submit Daily Task Status</h3>
+              <button style="border: none; background: none; font-size: 1.2rem; cursor: pointer;" onclick="state.showSubmitUpdateModal=false; render();">&times;</button>
+            </div>
+            <form onsubmit="event.preventDefault(); submitDailyUpdate(
+              '${task.id}',
+              document.getElementById('statusSelect').value,
+              document.getElementById('progressInput').value,
+              document.getElementById('remarksInput').value
+            );">
+              <div class="modal-body">
+                <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--border);">
+                  <div style="font-size: 0.8rem; color: var(--text-muted);">Task Name</div>
+                  <strong style="font-size: 1rem; color: #1e1b4b;">${task.title}</strong>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">End of Day Status</label>
+                  <select id="statusSelect" class="form-control" onchange="
+                    const s = this.options[this.selectedIndex].text;
+                    if(s === 'COMPLETED') document.getElementById('progressInput').value = 100;
+                    if(s === 'NOT_STARTED') document.getElementById('progressInput').value = 0;
+                  ">
+                    ${state.statuses.map(s => `
+                      <option value="${s.id}" ${latest?.status_id === s.id ? 'selected' : ''}>${s.name}</option>
+                    `).join('')}
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Progress Percentage (0 - 100%)</label>
+                  <input id="progressInput" class="form-control" type="number" min="0" max="100" required value="${latest?.progress_percentage || 0}" />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Daily Progress Remarks & Notes</label>
+                  <textarea id="remarksInput" class="form-control" placeholder="What did you achieve today? Are there any blockers?" required>${latest?.remarks || ''}</textarea>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="state.showSubmitUpdateModal=false; render();">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save & Submit Update</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCreateTaskModal() {
+      if (!state.showCreateTaskModal) return '';
+      const todayStr = new Date().toISOString().split('T')[0];
+      return `
+        <div class="modal-overlay">
+          <div class="modal-card">
+            <div class="modal-header">
+              <h3 style="font-weight: 700;">Create & Assign New Task</h3>
+              <button style="border: none; background: none; font-size: 1.2rem; cursor: pointer;" onclick="state.showCreateTaskModal=false; render();">&times;</button>
+            </div>
+            <form onsubmit="event.preventDefault(); createTask(
+              document.getElementById('taskTitle').value,
+              document.getElementById('taskDesc').value,
+              document.getElementById('taskPriority').value,
+              document.getElementById('taskDueDate').value,
+              document.getElementById('taskAssignee').value
+            );">
+              <div class="modal-body">
+                <div class="form-group">
+                  <label class="form-label">Task Title</label>
+                  <input id="taskTitle" class="form-control" placeholder="e.g. Implement Authorization Middleware" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Description</label>
+                  <textarea id="taskDesc" class="form-control" placeholder="Detailed requirements and deliverables"></textarea>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-group">
+                    <label class="form-label">Priority</label>
+                    <select id="taskPriority" class="form-control">
+                      <option value="LOW">LOW</option>
+                      <option value="MEDIUM" selected>MEDIUM</option>
+                      <option value="HIGH">HIGH</option>
+                      <option value="CRITICAL">CRITICAL</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Target Due Date</label>
+                    <input id="taskDueDate" class="form-control" type="date" required value="${todayStr}" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Assign To Employee</label>
+                  <select id="taskAssignee" class="form-control">
+                    <option value="">-- Select Assignee --</option>
+                    ${state.users.map(u => `<option value="${u.id}">${u.name} (${u.department})</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="state.showCreateTaskModal=false; render();">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Task</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCreateUserModal() {
+      if (!state.showCreateUserModal) return '';
+      return `
+        <div class="modal-overlay">
+          <div class="modal-card">
+            <div class="modal-header">
+              <h3 style="font-weight: 700;">Add New User / Employee</h3>
+              <button style="border: none; background: none; font-size: 1.2rem; cursor: pointer;" onclick="state.showCreateUserModal=false; render();">&times;</button>
+            </div>
+            <form onsubmit="event.preventDefault(); createUser(
+              document.getElementById('userName').value,
+              document.getElementById('userEmail').value,
+              document.getElementById('userEmpId').value,
+              document.getElementById('userPassword').value,
+              document.getElementById('userDept').value,
+              document.getElementById('userDesig').value,
+              document.getElementById('userRole').value,
+              document.getElementById('userMgr').value
+            );">
+              <div class="modal-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input id="userName" class="form-control" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Employee Code</label>
+                    <input id="userEmpId" class="form-control" placeholder="EMP301" required />
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input id="userEmail" class="form-control" type="email" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input id="userPassword" class="form-control" type="password" required />
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-group">
+                    <label class="form-label">Department</label>
+                    <input id="userDept" class="form-control" value="Engineering" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Designation</label>
+                    <input id="userDesig" class="form-control" value="Software Engineer" required />
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-group">
+                    <label class="form-label">System Role</label>
+                    <select id="userRole" class="form-control">
+                      <option value="EMPLOYEE">EMPLOYEE</option>
+                      <option value="MANAGER">MANAGER</option>
+                      <option value="ADMIN">ADMIN</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Reporting Manager</label>
+                    <select id="userMgr" class="form-control">
+                      <option value="">None</option>
+                      ${state.users.map(u => `<option value="${u.id}">${u.name}</option>`).join('')}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="state.showCreateUserModal=false; render();">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create User</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    function render() {
+      const app = document.getElementById('app');
+      if (!state.token || !state.user) {
+        app.innerHTML = renderLogin();
+        return;
+      }
+
+      const role = state.user.roles[0];
+      let tabContent = '';
+      if (state.activeTab === 'dashboard') {
+        tabContent = (role === 'ADMIN' || role === 'MANAGER') ? renderManagerDashboard() : renderEmployeeDashboard();
+      } else if (state.activeTab === 'tasks') {
+        tabContent = renderTasksTab();
+      } else if (state.activeTab === 'history') {
+        tabContent = renderHistoryTab();
+      } else if (state.activeTab === 'users') {
+        tabContent = renderUsersTab();
+      }
+
+      app.innerHTML = `
+        <div class="app-container">
+          ${renderSidebar()}
+          <div class="main-content">
+            <div class="top-header">
+              <div class="page-title">
+                ${state.activeTab === 'dashboard' ? (role === 'EMPLOYEE' ? 'My Daily Workspace' : 'Executive Overview') : ''}
+                ${state.activeTab === 'tasks' ? 'Tasks & Assignments' : ''}
+                ${state.activeTab === 'history' ? 'Daily Progress Logs' : ''}
+                ${state.activeTab === 'users' ? 'Organization Directory' : ''}
+              </div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                Today: <strong>${new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}</strong>
+              </div>
+            </div>
+            <div class="content-body">
+              ${tabContent}
+            </div>
+          </div>
+        </div>
+        ${renderSubmitUpdateModal()}
+        ${renderCreateTaskModal()}
+        ${renderCreateUserModal()}
+      `;
+    }
+
+    // Startup
+    if (state.token) {
+      loadInitialData();
+    } else {
+      render();
+    }
+  </script>
+</body>
+</html>
